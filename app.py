@@ -134,7 +134,7 @@ def plot_circles(coords, packing_width, packing_height, title):
 
     # 2. Draw the inner (minimal) bounding box
     # --- VISUAL TWEAK 2: Correct label and dimensions ---
-    label_text = f'Packing Box ({packing_width:.2f} x {packing_height:.2f})'
+    label_text = f'Packing Box ({packing_width:} x {packing_height:})'
     
     # Only draw the inner box if it's not identical to the outer one
     if not np.isclose(packing_width, SQUARE_SIDE) or not np.isclose(packing_height, SQUARE_SIDE):
@@ -239,7 +239,7 @@ elif option == '105 Circles (Hexagonal Layout)':
     explanation = f"""
     This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
     * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
-    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:.2f}** and a height of **{packing_height:.2f}**.
+    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:}** and a height of **{packing_height:}**.
     """
 
 elif option == '106 Circles (Optimal Solution)':
@@ -250,7 +250,7 @@ elif option == '106 Circles (Optimal Solution)':
         explanation = f"""
         This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms.
         * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces.
-        * **Dimensions:** The minimal bounding box for this solution is **{packing_width:.2f} x {packing_height:.2f}**.
+        * **Dimensions:** The minimal bounding box for this solution is **{packing_width:} x {packing_height:}**.
         * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com).
         """
     else:

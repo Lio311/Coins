@@ -11,11 +11,6 @@ CIRCLE_RADIUS = CIRCLE_DIAMETER / 2.0
 DATA_DIR = "data"
 COORDS_106_FILE = os.path.join(DATA_DIR, "coords_106.txt")
 
-# The side of the minimal bounding box for the 106-circle solution
-# This is known from the packing research.
-# We will use this as a reference, but also dynamically calculate from loaded coords.
-SOLUTION_SIDE_106_REFERENCE = 9.697932828
-
 # --- Coordinate Generation Functions ---
 
 def generate_coords_100_circles():
@@ -101,28 +96,21 @@ def load_coords_106_circles():
         st.warning(f"Warning: {COORDS_106_FILE} was expected to have 106 lines, but has {len(raw_coords)}.")
     
     # --- Crucial adjustment for visualization ---
-    # Find the minimum X and Y values
+    # Find the minimum X and Y values from the raw data
     min_x = np.min(raw_coords[:, 0])
     min_y = np.min(raw_coords[:, 1])
 
-    # Adjust all coordinates so the bottom-leftmost circle's edge is at (0,0)
-    # The packomania data often has negative coordinates or starts elsewhere.
+    # Adjust all coordinates so the bottom-leftmost circle's *edge* is at (0,0)
     adjusted_coords = raw_coords.copy()
     adjusted_coords[:, 0] -= (min_x - CIRCLE_RADIUS) # Adjust X so min_x - R = 0
     adjusted_coords[:, 1] -= (min_y - CIRCLE_RADIUS) # Adjust Y so min_y - R = 0
 
     # Calculate the actual required packing size based on adjusted coordinates
-    # Max X/Y plus radius for the rightmost/topmost circle
     packing_width = np.max(adjusted_coords[:, 0]) + CIRCLE_RADIUS
     packing_height = np.max(adjusted_coords[:, 1]) + CIRCLE_RADIUS
 
     # We use the larger of the two to define the square packing_side
     packing_side_actual = max(packing_width, packing_height)
-
-    # For the 106 solution, we know the theoretical minimal side is SOLUTION_SIDE_106_REFERENCE
-    # We can use that if the calculated one is slightly off due to float precision or if it's smaller.
-    # It's usually safe to just use the calculated one if it's robust.
-    # For now, let's use the actual calculated one for better fit.
     
     return adjusted_coords, packing_side_actual
 
@@ -130,10 +118,11 @@ def load_coords_106_circles():
 
 def plot_circles(coords, packing_side, title):
     """Uses Matplotlib to draw the circles in the square."""
-    fig, ax = plt.subplots(figsize=(8, 8)) # Good size for Streamlit. Reduced from 10x10 for smaller image.
+    
+    # --- VISUAL TWEAK 1: Smaller figure size ---
+    fig, ax = plt.subplots(figsize=(7, 7)) # Reduced from 8x8 to 7x7
 
     # Calculate offset to center the packing inside the 10x10 square
-    # Ensure packing_side doesn't exceed SQUARE_SIDE to prevent negative offset
     actual_packing_dim = min(packing_side, SQUARE_SIDE) 
     offset = (SQUARE_SIDE - actual_packing_dim) / 2.0
 
@@ -150,25 +139,30 @@ def plot_circles(coords, packing_side, title):
     ax.add_patch(square_outer)
 
     # 2. Draw the inner (minimal) bounding box
-    if actual_packing_dim < SQUARE_SIDE:
-        square_inner = patches.Rectangle(
-            (offset, offset),
-            actual_packing_dim,
-            actual_packing_dim,
-            fill=False,
-            edgecolor='navy',
-            linestyle='--',
-            linewidth=1.5,
-            label=f'Actual Packed Area (~{actual_packing_dim:.3f})'
-        )
-        ax.add_patch(square_inner)
+    if actual_packing_dim <= SQUARE_SIDE:
+        # --- VISUAL TWEAK 2: Changed label text ---
+        square_inner_label = f'Packing Bounding Box (~{actual_packing_dim:.3f})'
+        
+        # Don't draw the inner box if it's basically the same as the outer box
+        if not np.isclose(actual_packing_dim, SQUARE_SIDE):
+            square_inner = patches.Rectangle(
+                (offset, offset),
+                actual_packing_dim,
+                actual_packing_dim,
+                fill=False,
+                edgecolor='navy',
+                linestyle='--',
+                linewidth=1.5,
+                label=square_inner_label
+            )
+            ax.add_patch(square_inner)
 
     # 3. Draw all the circles
     for (x, y) in coords:
         circle = patches.Circle(
             (x + offset, y + offset),  # Apply offset to center the circle
             CIRCLE_RADIUS,
-            facecolor='cornflowerblue', # A nice blue
+            facecolor='cornflowerblue', 
             edgecolor='black',
             alpha=0.7
         )
@@ -233,13 +227,13 @@ elif option == '105 Circles (Hexagonal Layout)':
     explanation = """
     This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
     * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
-    * **Efficiency:** As you can see from the blue dashed line, this packing doesn't use the full 10.0 height (it uses ~9.66), but its higher density allows 5 extra circles to be added.
+    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which uses ~9.66 of the height, allowing for higher density.
     """
 
 elif option == '106 Circles (Optimal Solution)':
     coords, packing_side = load_coords_106_circles()
-    num_circles = len(coords) # Will be 106 if file loaded, 0 if error
-    if num_circles > 0: # Check if loading was successful
+    num_circles = len(coords) # Will be > 0 if file loaded
+    if num_circles > 0: 
         plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Optimal)"
         explanation = f"""
         This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms and is not intuitive.
@@ -261,11 +255,11 @@ if len(coords) > 0:
     with st.expander("About This Solution", expanded=True):
         st.markdown(explanation)
     
-    # Show the key
+    # --- VISUAL TWEAK 3: Updated Key text ---
     st.info("""
     **Key:**
     * **Red Box:** The 10x10 target square.
-    * **Blue Dashed Box:** The minimal area required for the packing. This visually indicates how tightly the circles fit within the square.
+    * **Blue Dashed Box:** The minimal **bounding box** for the packing. This visually indicates how tightly the circles fit.
     """)
 else:
     # This shows if the 106-file load failed

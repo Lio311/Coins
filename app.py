@@ -102,7 +102,7 @@ def load_coords_106_circles():
     st.sidebar.info(f"Debug: Calculated packing dimensions: {packing_width:.3f} x {packing_height:.3f}")
     
     # --- התוספת שהתבקשה ---
-    st.sidebar.success(f"קובץ נטען בהצלחה. נמצאו {len(adjusted_coords)} קואורדינטות.")
+    st.sidebar.success(f"File loaded successfully. Found {len(adjusted_coords)} coordinates.")
     # --- סוף התוספת ---
     
     # Returns coords, packing_width, packing_height

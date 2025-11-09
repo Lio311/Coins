@@ -165,7 +165,7 @@ def plot_circles(coords, packing_width, packing_height, title):
     ax.set_aspect('equal')
     ax.set_xlim(0, SQUARE_SIDE)
     ax.set_ylim(0, SQUARE_SIDE)
-    ax.set_title(title, fontsize=12)
+    ax.set_title(title, fontsize=16)
     ax.legend(loc='lower right', fontsize=8)
     plt.grid(True, linestyle=':', alpha=0.5)
     

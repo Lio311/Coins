@@ -114,7 +114,7 @@ def plot_circles(coords, packing_width, packing_height, title):
     """Uses Matplotlib to draw the circles in the square."""
     
     # --- VISUAL TWEAK 1: Smaller figure size ---
-    fig, ax = plt.subplots(figsize=(6, 6)) # הוחזר ל-6x6 לקריאות טובה יותר
+    fig, ax = plt.subplots(figsize=(3, 3)) 
 
     # Calculate offset for X and Y to center the packing
     offset_x = (SQUARE_SIDE - packing_width) / 2.0

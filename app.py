@@ -18,46 +18,42 @@ def generate_coords_100_circles():
     coords = []
     for row in range(10):
         for col in range(10):
-            # Circle center
             x = col * CIRCLE_DIAMETER + CIRCLE_RADIUS
             y = row * CIRCLE_DIAMETER + CIRCLE_RADIUS
             coords.append((x, y))
-    # This packing perfectly fills the 10x10 square
-    return np.array(coords), SQUARE_SIDE
+    # Returns coords, packing_width, packing_height
+    return np.array(coords), SQUARE_SIDE, SQUARE_SIDE
 
 def generate_coords_105_circles():
     """Generates coordinates for a hexagonal (honeycomb) packing of 105 circles."""
     coords = []
     
-    # Height of one row in a hexagonal packing (sqrt(3)/2 * diameter)
     row_height = np.sqrt(3) / 2 * CIRCLE_DIAMETER  # Approx 0.866
+    num_rows = 11
     
-    num_rows = 11  # 11 rows fit inside the 10.0 height
+    # Calculate total packing height
+    packing_height = (num_rows - 1) * row_height + CIRCLE_DIAMETER # ~9.66
     
-    # Calculate the total height of this packing
-    total_packing_height = (num_rows - 1) * row_height + CIRCLE_DIAMETER
+    # Calculate total packing width
+    # The long row (10 circles) determines the width
+    packing_width = (10 - 1) * CIRCLE_DIAMETER + CIRCLE_DIAMETER # 10.0
     
     num_circles_long_row = 10
     num_circles_short_row = 9
     
     for i in range(num_rows):
-        is_long_row = (i % 2 == 0)  # Rows 0, 2, 4... are "long"
-        
+        is_long_row = (i % 2 == 0)
         current_num_circles = num_circles_long_row if is_long_row else num_circles_short_row
-        
-        # Y center for this row
         y_center = i * row_height + CIRCLE_RADIUS
         
         for j in range(current_num_circles):
             x_center = j * CIRCLE_DIAMETER + CIRCLE_RADIUS
-            
-            # If it's a "short" row, offset it by half a radius
             if not is_long_row:
                 x_center += CIRCLE_RADIUS
-            
             coords.append((x_center, y_center))
             
-    return np.array(coords), total_packing_height
+    # Returns coords, packing_width, packing_height
+    return np.array(coords), packing_width, packing_height
 
 def load_coords_106_circles():
     """
@@ -65,66 +61,54 @@ def load_coords_106_circles():
     coordinates to start from (0,0) and then determines the actual packing size.
     """
     
-    # Check if file exists
     if not os.path.exists(COORDS_106_FILE):
         st.error(f"Data file not found: {COORDS_106_FILE}")
-        st.info(f"Please download the file from http://www.packomania.com/txt/csq106.txt and save it as 'data/coords_106.txt' in your project directory.")
-        return np.array([]), 0
+        st.info(f"Please download the file from http://www.packomania.com/txt/csq106.txt and save it as 'data/coords_106.txt'.")
+        return np.array([]), 0, 0
 
-    # Check if file is empty (causes loadtxt error)
     if os.path.getsize(COORDS_106_FILE) == 0:
         st.error(f"Data file is empty: {COORDS_106_FILE}")
-        return np.array([]), 0
+        return np.array([]), 0, 0
         
     try:
-        # ndmin=2 ensures a 2D array
-        # usecols=(1, 2) skips the first (index) column and reads only X and Y
         raw_coords = np.loadtxt(COORDS_106_FILE, ndmin=2, usecols=(1, 2))
-        
     except Exception as e:
         st.error(f"Error loading data file {COORDS_106_FILE}: {e}")
-        st.error("This often means the file is corrupted with broken lines or incorrect format. Please re-download it from packomania.com and ensure it's saved correctly.")
-        return np.array([]), 0
+        st.error("This often means the file is corrupted. Please re-download it.")
+        return np.array([]), 0, 0
 
-    # Validate data shape (should be N rows, 2 columns)
     if raw_coords.shape[1] != 2:
-         st.error(f"Data file {COORDS_106_FILE} is not in the correct (X, Y) format. Expected 2 columns.")
-         return np.array([]), 0
+         st.error(f"Data file {COORDS_106_FILE} is not in the correct (X, Y) format.")
+         return np.array([]), 0, 0
 
-    # Just a warning, not a critical error
     if len(raw_coords) != 106:
         st.warning(f"Warning: {COORDS_106_FILE} was expected to have 106 lines, but has {len(raw_coords)}.")
     
-    # --- Crucial adjustment for visualization ---
-    # Find the minimum X and Y values from the raw data
+    # Adjust coordinates to start from (0,0) at the edge
     min_x = np.min(raw_coords[:, 0])
     min_y = np.min(raw_coords[:, 1])
-
-    # Adjust all coordinates so the bottom-leftmost circle's *edge* is at (0,0)
     adjusted_coords = raw_coords.copy()
-    adjusted_coords[:, 0] -= (min_x - CIRCLE_RADIUS) # Adjust X so min_x - R = 0
-    adjusted_coords[:, 1] -= (min_y - CIRCLE_RADIUS) # Adjust Y so min_y - R = 0
+    adjusted_coords[:, 0] -= (min_x - CIRCLE_RADIUS)
+    adjusted_coords[:, 1] -= (min_y - CIRCLE_RADIUS)
 
-    # Calculate the actual required packing size based on adjusted coordinates
+    # Calculate actual packing dimensions
     packing_width = np.max(adjusted_coords[:, 0]) + CIRCLE_RADIUS
     packing_height = np.max(adjusted_coords[:, 1]) + CIRCLE_RADIUS
-
-    # We use the larger of the two to define the square packing_side
-    packing_side_actual = max(packing_width, packing_height)
     
-    return adjusted_coords, packing_side_actual
+    # Returns coords, packing_width, packing_height
+    return adjusted_coords, packing_width, packing_height
 
 # --- Plotting Function ---
 
-def plot_circles(coords, packing_side, title):
+def plot_circles(coords, packing_width, packing_height, title):
     """Uses Matplotlib to draw the circles in the square."""
     
     # --- VISUAL TWEAK 1: Smaller figure size ---
-    fig, ax = plt.subplots(figsize=(7, 7)) # Reduced from 8x8 to 7x7
+    fig, ax = plt.subplots(figsize=(6, 6)) # Reduced to 6x6
 
-    # Calculate offset to center the packing inside the 10x10 square
-    actual_packing_dim = min(packing_side, SQUARE_SIDE) 
-    offset = (SQUARE_SIDE - actual_packing_dim) / 2.0
+    # Calculate offset for X and Y to center the packing
+    offset_x = (SQUARE_SIDE - packing_width) / 2.0
+    offset_y = (SQUARE_SIDE - packing_height) / 2.0
 
     # 1. Draw the outer 10x10 square
     square_outer = patches.Rectangle(
@@ -139,28 +123,27 @@ def plot_circles(coords, packing_side, title):
     ax.add_patch(square_outer)
 
     # 2. Draw the inner (minimal) bounding box
-    if actual_packing_dim <= SQUARE_SIDE:
-        # --- VISUAL TWEAK 2: Changed label text ---
-        square_inner_label = f'Packing Bounding Box (~{actual_packing_dim:.3f})'
-        
-        # Don't draw the inner box if it's basically the same as the outer box
-        if not np.isclose(actual_packing_dim, SQUARE_SIDE):
-            square_inner = patches.Rectangle(
-                (offset, offset),
-                actual_packing_dim,
-                actual_packing_dim,
-                fill=False,
-                edgecolor='navy',
-                linestyle='--',
-                linewidth=1.5,
-                label=square_inner_label
-            )
-            ax.add_patch(square_inner)
+    # --- VISUAL TWEAK 2: Correct label and dimensions ---
+    label_text = f'Packing Box (~{packing_width:.3f} x {packing_height:.3f})'
+    
+    # Only draw the inner box if it's not identical to the outer one
+    if not np.isclose(packing_width, SQUARE_SIDE) or not np.isclose(packing_height, SQUARE_SIDE):
+        square_inner = patches.Rectangle(
+            (offset_x, offset_y), # Use separate X/Y offsets
+            packing_width,       # Use packing width
+            packing_height,      # Use packing height
+            fill=False,
+            edgecolor='navy',
+            linestyle='--',
+            linewidth=1.5,
+            label=label_text
+        )
+        ax.add_patch(square_inner)
 
     # 3. Draw all the circles
     for (x, y) in coords:
         circle = patches.Circle(
-            (x + offset, y + offset),  # Apply offset to center the circle
+            (x + offset_x, y + offset_y),  # Apply X and Y offsets
             CIRCLE_RADIUS,
             facecolor='cornflowerblue', 
             edgecolor='black',
@@ -169,30 +152,28 @@ def plot_circles(coords, packing_side, title):
         ax.add_patch(circle)
 
     # --- Final plot adjustments ---
-    ax.set_aspect('equal') # Ensures circles are not squashed
+    ax.set_aspect('equal')
     ax.set_xlim(0, SQUARE_SIDE)
     ax.set_ylim(0, SQUARE_SIDE)
     ax.set_title(title, fontsize=16)
     ax.legend(loc='lower right')
     plt.grid(True, linestyle=':', alpha=0.5)
     
-    st.pyplot(fig) # Display the plot in Streamlit
+    st.pyplot(fig)
 
 # --- Streamlit App UI ---
 
-# Set page config for a cleaner look
 st.set_page_config(
     page_title="Circle Packing Visualizer",
-    page_icon="🔵", # Visual flair
+    page_icon="🔵",
     layout="centered",
     initial_sidebar_state="expanded"
 )
 
 st.title("🔵 Circle Packing Visualizer")
 st.markdown("How many coins (Diameter=1) can fit in a 10x10 square? This app visualizes different packing solutions.")
-st.markdown("---") # Horizontal line
+st.markdown("---")
 
-# --- Sidebar for selection ---
 st.sidebar.header("Controls")
 option = st.sidebar.radio(
     "Select a packing solution:",
@@ -205,40 +186,42 @@ option = st.sidebar.radio(
 
 # --- Main Page Logic ---
 coords = np.array([])
-packing_side = SQUARE_SIDE
+packing_width = 0.0
+packing_height = 0.0
 num_circles = 0
 plot_title = ""
 explanation = ""
 
 if option == '100 Circles (Grid Layout)':
-    coords, packing_side = generate_coords_100_circles()
+    coords, packing_width, packing_height = generate_coords_100_circles()
     num_circles = 100
     plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Simple Grid)"
     explanation = """
     This is the most intuitive solution. A simple **10x10 grid** places 100 circles perfectly.
     * **Efficiency:** This packing fills 100% of the square's width and height.
-    * **Space Usage:** The area covered by circles is $100 \times \pi \times (0.5)^2 \approx 78.54$. This is the baseline density.
+    * **Space Usage:** The area covered by circles is $100 \times \pi \times (0.5)^2 \approx 78.54$.
     """
 
 elif option == '105 Circles (Hexagonal Layout)':
-    coords, packing_side = generate_coords_105_circles()
+    coords, packing_width, packing_height = generate_coords_105_circles()
     num_circles = 105
     plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Hexagonal)"
-    explanation = """
+    explanation = f"""
     This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
     * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
-    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which uses ~9.66 of the height, allowing for higher density.
+    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:.3f}** and a height of **{packing_height:.3f}**.
     """
 
 elif option == '106 Circles (Optimal Solution)':
-    coords, packing_side = load_coords_106_circles()
-    num_circles = len(coords) # Will be > 0 if file loaded
+    coords, packing_width, packing_height = load_coords_106_circles()
+    num_circles = len(coords)
     if num_circles > 0: 
         plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Optimal)"
         explanation = f"""
-        This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms and is not intuitive.
-        * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces left by the 105-circle hexagonal layout.
-        * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com), a database of optimal packing solutions.
+        This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms.
+        * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces.
+        * **Dimensions:** The minimal bounding box for this solution is **{packing_width:.3f} x {packing_height:.3f}**.
+        * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com).
         """
     else:
         plot_title = "Error Loading 106 Circles Data"
@@ -248,19 +231,15 @@ elif option == '106 Circles (Optimal Solution)':
 if len(coords) > 0:
     st.subheader(f"Displaying: {num_circles} Circles")
     
-    # Show the plot
-    plot_circles(coords, packing_side, plot_title)
+    plot_circles(coords, packing_width, packing_height, plot_title)
     
-    # Show the explanation for the selected option
     with st.expander("About This Solution", expanded=True):
         st.markdown(explanation)
     
-    # --- VISUAL TWEAK 3: Updated Key text ---
     st.info("""
     **Key:**
     * **Red Box:** The 10x10 target square.
-    * **Blue Dashed Box:** The minimal **bounding box** for the packing. This visually indicates how tightly the circles fit.
+    * **Blue Dashed Box:** The minimal **bounding box (Width x Height)** for the packing.
     """)
 else:
-    # This shows if the 106-file load failed
     st.warning("Could not display the selected solution. Please check the error messages above.")

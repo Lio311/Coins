@@ -124,7 +124,7 @@ def plot_circles(coords, packing_width, packing_height, title):
 
     # 2. Draw the inner (minimal) bounding box
     # --- VISUAL TWEAK 2: Correct label and dimensions ---
-    label_text = f'Packing Box (~{packing_width:.3f} x {packing_height:.3f})'
+    label_text = f'Packing Box ({packing_width:.2f} x {packing_height:.2f})'
     
     # Only draw the inner box if it's not identical to the outer one
     if not np.isclose(packing_width, SQUARE_SIDE) or not np.isclose(packing_height, SQUARE_SIDE):
@@ -178,6 +178,7 @@ st.sidebar.header("Controls")
 option = st.sidebar.radio(
     "Select a packing solution:",
     (
+        'Default (Empty Square)',
         '100 Circles (Grid Layout)', 
         '105 Circles (Hexagonal Layout)', 
         '106 Circles (Optimal Solution)'
@@ -192,7 +193,23 @@ num_circles = 0
 plot_title = ""
 explanation = ""
 
-if option == '100 Circles (Grid Layout)':
+if option == 'Default (Empty Square)':
+    # Show empty square with a single circle as reference
+    coords = np.array([[5.0, 5.0]])  # Single circle in center
+    packing_width = CIRCLE_DIAMETER
+    packing_height = CIRCLE_DIAMETER
+    num_circles = 1
+    plot_title = "Empty 10x10 Square with Reference Circle (D=1)"
+    explanation = """
+    זהו **ריבוע ריק בגודל 10×10** עם **מטבע בודד** (קוטר=1) כנקודת התייחסות.
+    * **מטרה:** למקסם את מספר המטבעות שניתן להכניס לריבוע.
+    * **מידות המטבע:** קוטר = 1, רדיוס = 0.5
+    * **מידות הריבוע:** 10×10
+    
+    בחר אחת מהאפשרויות בתפריט כדי לראות פתרונות שונים לארגון המטבעות.
+    """
+
+elif option == '100 Circles (Grid Layout)':
     coords, packing_width, packing_height = generate_coords_100_circles()
     num_circles = 100
     plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Simple Grid)"
@@ -209,7 +226,7 @@ elif option == '105 Circles (Hexagonal Layout)':
     explanation = f"""
     This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
     * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
-    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:.3f}** and a height of **{packing_height:.3f}**.
+    * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:.2f}** and a height of **{packing_height:.2f}**.
     """
 
 elif option == '106 Circles (Optimal Solution)':
@@ -220,7 +237,7 @@ elif option == '106 Circles (Optimal Solution)':
         explanation = f"""
         This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms.
         * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces.
-        * **Dimensions:** The minimal bounding box for this solution is **{packing_width:.3f} x {packing_height:.3f}**.
+        * **Dimensions:** The minimal bounding box for this solution is **{packing_width:.2f} x {packing_height:.2f}**.
         * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com).
         """
     else:

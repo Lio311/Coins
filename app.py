@@ -13,7 +13,8 @@ COORDS_106_FILE = os.path.join(DATA_DIR, "coords_106.txt")
 
 # The side of the minimal bounding box for the 106-circle solution
 # This is known from the packing research.
-SOLUTION_SIDE_106_MINIMAL = 9.697932828
+# We will use this as a reference, but also dynamically calculate from loaded coords.
+SOLUTION_SIDE_106_REFERENCE = 9.697932828
 
 # --- Coordinate Generation Functions ---
 
@@ -64,7 +65,10 @@ def generate_coords_105_circles():
     return np.array(coords), total_packing_height
 
 def load_coords_106_circles():
-    """Loads the 106-circle optimal solution from a text file."""
+    """
+    Loads the 106-circle optimal solution from a text file and adjusts
+    coordinates to start from (0,0) and then determines the actual packing size.
+    """
     
     # Check if file exists
     if not os.path.exists(COORDS_106_FILE):
@@ -78,37 +82,60 @@ def load_coords_106_circles():
         return np.array([]), 0
         
     try:
-        # --- THIS IS THE FIX ---
-        # 1. ndmin=2 ensures a 2D array
-        # 2. usecols=(1, 2) skips the first (index) column and reads only X and Y
-        coords = np.loadtxt(COORDS_106_FILE, ndmin=2, usecols=(1, 2))
+        # ndmin=2 ensures a 2D array
+        # usecols=(1, 2) skips the first (index) column and reads only X and Y
+        raw_coords = np.loadtxt(COORDS_106_FILE, ndmin=2, usecols=(1, 2))
         
     except Exception as e:
-        # This will catch errors if the file is still broken (like line 30)
         st.error(f"Error loading data file {COORDS_106_FILE}: {e}")
-        st.error("This often means the file is corrupted with broken lines. Please re-download it.")
+        st.error("This often means the file is corrupted with broken lines or incorrect format. Please re-download it from packomania.com and ensure it's saved correctly.")
         return np.array([]), 0
 
     # Validate data shape (should be N rows, 2 columns)
-    # This check will now pass because usecols=(1, 2) ensures shape[1] is 2
-    if coords.shape[1] != 2:
+    if raw_coords.shape[1] != 2:
          st.error(f"Data file {COORDS_106_FILE} is not in the correct (X, Y) format. Expected 2 columns.")
          return np.array([]), 0
 
     # Just a warning, not a critical error
-    if len(coords) != 106:
-        st.warning(f"Warning: {COORDS_106_FILE} was expected to have 106 lines, but has {len(coords)}.")
+    if len(raw_coords) != 106:
+        st.warning(f"Warning: {COORDS_106_FILE} was expected to have 106 lines, but has {len(raw_coords)}.")
     
-    return coords, SOLUTION_SIDE_106_MINIMAL
+    # --- Crucial adjustment for visualization ---
+    # Find the minimum X and Y values
+    min_x = np.min(raw_coords[:, 0])
+    min_y = np.min(raw_coords[:, 1])
+
+    # Adjust all coordinates so the bottom-leftmost circle's edge is at (0,0)
+    # The packomania data often has negative coordinates or starts elsewhere.
+    adjusted_coords = raw_coords.copy()
+    adjusted_coords[:, 0] -= (min_x - CIRCLE_RADIUS) # Adjust X so min_x - R = 0
+    adjusted_coords[:, 1] -= (min_y - CIRCLE_RADIUS) # Adjust Y so min_y - R = 0
+
+    # Calculate the actual required packing size based on adjusted coordinates
+    # Max X/Y plus radius for the rightmost/topmost circle
+    packing_width = np.max(adjusted_coords[:, 0]) + CIRCLE_RADIUS
+    packing_height = np.max(adjusted_coords[:, 1]) + CIRCLE_RADIUS
+
+    # We use the larger of the two to define the square packing_side
+    packing_side_actual = max(packing_width, packing_height)
+
+    # For the 106 solution, we know the theoretical minimal side is SOLUTION_SIDE_106_REFERENCE
+    # We can use that if the calculated one is slightly off due to float precision or if it's smaller.
+    # It's usually safe to just use the calculated one if it's robust.
+    # For now, let's use the actual calculated one for better fit.
+    
+    return adjusted_coords, packing_side_actual
 
 # --- Plotting Function ---
 
 def plot_circles(coords, packing_side, title):
     """Uses Matplotlib to draw the circles in the square."""
-    fig, ax = plt.subplots(figsize=(8, 8)) # Good size for Streamlit
+    fig, ax = plt.subplots(figsize=(8, 8)) # Good size for Streamlit. Reduced from 10x10 for smaller image.
 
     # Calculate offset to center the packing inside the 10x10 square
-    offset = (SQUARE_SIDE - packing_side) / 2.0
+    # Ensure packing_side doesn't exceed SQUARE_SIDE to prevent negative offset
+    actual_packing_dim = min(packing_side, SQUARE_SIDE) 
+    offset = (SQUARE_SIDE - actual_packing_dim) / 2.0
 
     # 1. Draw the outer 10x10 square
     square_outer = patches.Rectangle(
@@ -123,16 +150,16 @@ def plot_circles(coords, packing_side, title):
     ax.add_patch(square_outer)
 
     # 2. Draw the inner (minimal) bounding box
-    if packing_side < SQUARE_SIDE:
+    if actual_packing_dim < SQUARE_SIDE:
         square_inner = patches.Rectangle(
             (offset, offset),
-            packing_side,
-            packing_side,
+            actual_packing_dim,
+            actual_packing_dim,
             fill=False,
             edgecolor='navy',
             linestyle='--',
             linewidth=1.5,
-            label=f'Actual Packed Area (~{packing_side:.3f})'
+            label=f'Actual Packed Area (~{actual_packing_dim:.3f})'
         )
         ax.add_patch(square_inner)
 
@@ -238,7 +265,7 @@ if len(coords) > 0:
     st.info("""
     **Key:**
     * **Red Box:** The 10x10 target square.
-    * **Blue Dashed Box:** The minimal area required for the packing. If this is smaller than the red box, it means there is empty space around the edges.
+    * **Blue Dashed Box:** The minimal area required for the packing. This visually indicates how tightly the circles fit within the square.
     """)
 else:
     # This shows if the 106-file load failed

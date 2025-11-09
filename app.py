@@ -178,11 +178,11 @@ st.sidebar.header("Controls")
 option = st.sidebar.radio(
     "Select a packing solution:",
     (
-        'Default (Empty Square)',
         '100 Circles (Grid Layout)', 
         '105 Circles (Hexagonal Layout)', 
         '106 Circles (Optimal Solution)'
-    )
+    ),
+    index=None
 )
 
 # --- Main Page Logic ---
@@ -193,8 +193,8 @@ num_circles = 0
 plot_title = ""
 explanation = ""
 
-if option == 'Default (Empty Square)':
-    # Show empty square with a single circle as reference (no packing box)
+if option is None:
+    # Default view when nothing is selected
     coords = np.array([[5.0, 5.0]])  # Single circle in center
     packing_width = SQUARE_SIDE  # Same as square to avoid drawing inner box
     packing_height = SQUARE_SIDE

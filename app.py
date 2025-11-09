@@ -35,6 +35,7 @@ def generate_coords_105_circles():
     packing_height = (num_rows - 1) * row_height + CIRCLE_DIAMETER # ~9.66
     
     # Calculate total packing width
+    # The long row (10 circles) determines the width
     packing_width = (10 - 1) * CIRCLE_DIAMETER + CIRCLE_DIAMETER # 10.0
     
     num_circles_long_row = 10
@@ -56,8 +57,8 @@ def generate_coords_105_circles():
 
 def load_coords_106_circles():
     """
-    Loads the 106-circle optimal solution from a text file, calculates its
-    actual dimensions, and adjusts coordinates to start from (0,0) for plotting.
+    Loads the 106-circle optimal solution from a text file and adjusts
+    coordinates to start from (0,0) and then determines the actual packing size.
     """
     
     if not os.path.exists(COORDS_106_FILE):
@@ -83,28 +84,26 @@ def load_coords_106_circles():
     if len(raw_coords) != 106:
         st.warning(f"Warning: {COORDS_106_FILE} was expected to have 106 lines, but has {len(raw_coords)}.")
     
-    # --- THIS IS THE CORRECTED CALCULATION ---
-    # 1. Find the min/max of the *centers* from the file
-    min_x_center = np.min(raw_coords[:, 0])
-    max_x_center = np.max(raw_coords[:, 0])
-    min_y_center = np.min(raw_coords[:, 1])
-    max_y_center = np.max(raw_coords[:, 1])
+    # Adjust coordinates to start from (0,0) at the edge
+    min_x = np.min(raw_coords[:, 0])
+    min_y = np.min(raw_coords[:, 1])
+    adjusted_coords = raw_coords.copy()
+    adjusted_coords[:, 0] -= (min_x - CIRCLE_RADIUS)
+    adjusted_coords[:, 1] -= (min_y - CIRCLE_RADIUS)
 
-    # 2. Calculate the total width/height
-    # Span of centers + one full diameter (or 2 * radius)
-    packing_width = (max_x_center - min_x_center) + CIRCLE_DIAMETER
-    packing_height = (max_y_center - min_y_center) + CIRCLE_DIAMETER
-    # -------------------------------------------
-
+    # Calculate actual packing dimensions - the span from leftmost to rightmost circle edge
+    max_x = np.max(adjusted_coords[:, 0])
+    max_y = np.max(adjusted_coords[:, 1])
+    
+    packing_width = max_x + CIRCLE_RADIUS
+    packing_height = max_y + CIRCLE_RADIUS
+    
     # Debug: Show the calculated dimensions
     st.sidebar.info(f"Debug: Calculated packing dimensions: {packing_width:.3f} x {packing_height:.3f}")
     
-    # 3. Adjust coordinates for plotting (so they start at (0,0) edge)
-    adjusted_coords = raw_coords.copy()
-    adjusted_coords[:, 0] -= (min_x_center - CIRCLE_RADIUS)
-    adjusted_coords[:, 1] -= (min_y_center - CIRCLE_RADIUS)
-    
+    # --- התוספת שהתבקשה ---
     st.sidebar.success(f"File loaded successfully. Found {len(adjusted_coords)} coordinates.")
+    # --- סוף התוספת ---
     
     # Returns coords, packing_width, packing_height
     return adjusted_coords, packing_width, packing_height
@@ -114,7 +113,8 @@ def load_coords_106_circles():
 def plot_circles(coords, packing_width, packing_height, title):
     """Uses Matplotlib to draw the circles in the square."""
     
-    fig, ax = plt.subplots(figsize=(6, 6)) # 6x6 is a good size
+    # --- VISUAL TWEAK 1: Smaller figure size ---
+    fig, ax = plt.subplots(figsize=(6, 6)) # הוחזר ל-6x6 לקריאות טובה יותר
 
     # Calculate offset for X and Y to center the packing
     offset_x = (SQUARE_SIDE - packing_width) / 2.0
@@ -133,6 +133,7 @@ def plot_circles(coords, packing_width, packing_height, title):
     ax.add_patch(square_outer)
 
     # 2. Draw the inner (minimal) bounding box
+    # --- VISUAL TWEAK 2: Correct label and dimensions ---
     label_text = f'Packing Box ({packing_width:.2f} x {packing_height:.2f})'
     
     # Only draw the inner box if it's not identical to the outer one
@@ -191,7 +192,7 @@ option = st.sidebar.radio(
         '105 Circles (Hexagonal Layout)', 
         '106 Circles (Optimal Solution)'
     ),
-    index=None # Start with nothing selected
+    index=None # שום דבר לא נבחר בהתחלה
 )
 
 # --- Main Page Logic ---
@@ -207,8 +208,8 @@ if option is None:
     st.subheader("Welcome!")
     st.markdown("Please select a packing solution from the sidebar to begin.")
     
-    # Create an empty plot with one reference circle
-    coords = np.array([[SQUARE_SIDE / 2, SQUARE_SIDE / 2]]) # Single circle in center
+    # יצירת גרף ריק עם עיגול אחד לדוגמה
+    coords = np.array([[SQUARE_SIDE / 2, SQUARE_SIDE / 2]]) # עיגול בודד במרכז
     packing_width = CIRCLE_DIAMETER 
     packing_height = CIRCLE_DIAMETER
     num_circles = 1
@@ -250,7 +251,7 @@ elif option == '106 Circles (Optimal Solution)':
         This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms.
         * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces.
         * **Dimensions:** The minimal bounding box for this solution is **{packing_width:.2f} x {packing_height:.2f}**.
-        * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com). (Note: This specific data file spans 10.0x10.0, while the theoretical optimum is ~9.7x9.7).
+        * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com).
         """
     else:
         plot_title = "Error Loading 106 Circles Data"
@@ -258,7 +259,7 @@ elif option == '106 Circles (Optimal Solution)':
 # --- Display the plot and explanations ---
 
 if len(coords) > 0:
-    if option is not None: # Only show subheader if a real option was selected
+    if option is not None: # רק אם משהו נבחר
         st.subheader(f"Displaying: {num_circles} Circles")
     
     plot_circles(coords, packing_width, packing_height, plot_title)
@@ -272,5 +273,5 @@ if len(coords) > 0:
     * **Blue Dashed Box:** The minimal **bounding box (Width x Height)** for the packing.
     """)
 elif option is not None:
-    # If an option was selected but failed (e.g., 106 file error)
+    # אם משהו נבחר אבל הטעינה נכשלה (למשל 106)
     st.warning("Could not display the selected solution. Please check the error messages above.")

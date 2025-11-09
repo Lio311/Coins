@@ -194,19 +194,19 @@ plot_title = ""
 explanation = ""
 
 if option == 'Default (Empty Square)':
-    # Show empty square with a single circle as reference
+    # Show empty square with a single circle as reference (no packing box)
     coords = np.array([[5.0, 5.0]])  # Single circle in center
-    packing_width = CIRCLE_DIAMETER
-    packing_height = CIRCLE_DIAMETER
+    packing_width = SQUARE_SIDE  # Same as square to avoid drawing inner box
+    packing_height = SQUARE_SIDE
     num_circles = 1
     plot_title = "Empty 10x10 Square with Reference Circle (D=1)"
     explanation = """
-    זהו **ריבוע ריק בגודל 10×10** עם **מטבע בודד** (קוטר=1) כנקודת התייחסות.
-    * **מטרה:** למקסם את מספר המטבעות שניתן להכניס לריבוע.
-    * **מידות המטבע:** קוטר = 1, רדיוס = 0.5
-    * **מידות הריבוע:** 10×10
+    This is an **empty 10×10 square** with a **single coin** (diameter=1) as a reference point.
+    * **Goal:** Maximize the number of coins that can fit inside the square.
+    * **Coin dimensions:** Diameter = 1, Radius = 0.5
+    * **Square dimensions:** 10×10
     
-    בחר אחת מהאפשרויות בתפריט כדי לראות פתרונות שונים לארגון המטבעות.
+    Select one of the options in the menu to see different packing solutions.
     """
 
 elif option == '100 Circles (Grid Layout)':
@@ -216,7 +216,7 @@ elif option == '100 Circles (Grid Layout)':
     explanation = """
     This is the most intuitive solution. A simple **10x10 grid** places 100 circles perfectly.
     * **Efficiency:** This packing fills 100% of the square's width and height.
-    * **Space Usage:** The area covered by circles is $100 \times \pi \times (0.5)^2 \approx 78.54$.
+    * **Space Usage:** The area covered by circles is approximately 78.54 square units.
     """
 
 elif option == '105 Circles (Hexagonal Layout)':
@@ -225,7 +225,7 @@ elif option == '105 Circles (Hexagonal Layout)':
     plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Hexagonal)"
     explanation = f"""
     This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
-    * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
+    * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total 60 + 45 = 105).
     * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:.2f}** and a height of **{packing_height:.2f}**.
     """
 

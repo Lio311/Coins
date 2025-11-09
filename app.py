@@ -91,9 +91,15 @@ def load_coords_106_circles():
     adjusted_coords[:, 0] -= (min_x - CIRCLE_RADIUS)
     adjusted_coords[:, 1] -= (min_y - CIRCLE_RADIUS)
 
-    # Calculate actual packing dimensions
-    packing_width = np.max(adjusted_coords[:, 0]) + CIRCLE_RADIUS
-    packing_height = np.max(adjusted_coords[:, 1]) + CIRCLE_RADIUS
+    # Calculate actual packing dimensions - the span from leftmost to rightmost circle edge
+    max_x = np.max(adjusted_coords[:, 0])
+    max_y = np.max(adjusted_coords[:, 1])
+    
+    packing_width = max_x + CIRCLE_RADIUS
+    packing_height = max_y + CIRCLE_RADIUS
+    
+    # Debug: Show the calculated dimensions
+    st.sidebar.info(f"Debug: Calculated packing dimensions: {packing_width:.3f} x {packing_height:.3f}")
     
     # Returns coords, packing_width, packing_height
     return adjusted_coords, packing_width, packing_height

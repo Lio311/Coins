@@ -101,6 +101,10 @@ def load_coords_106_circles():
     # Debug: Show the calculated dimensions
     st.sidebar.info(f"Debug: Calculated packing dimensions: {packing_width:.3f} x {packing_height:.3f}")
     
+    # --- התוספת שהתבקשה ---
+    st.sidebar.success(f"קובץ נטען בהצלחה. נמצאו {len(adjusted_coords)} קואורדינטות.")
+    # --- סוף התוספת ---
+    
     # Returns coords, packing_width, packing_height
     return adjusted_coords, packing_width, packing_height
 
@@ -110,7 +114,7 @@ def plot_circles(coords, packing_width, packing_height, title):
     """Uses Matplotlib to draw the circles in the square."""
     
     # --- VISUAL TWEAK 1: Smaller figure size ---
-    fig, ax = plt.subplots(figsize=(4, 4)) 
+    fig, ax = plt.subplots(figsize=(6, 6)) # הוחזר ל-6x6 לקריאות טובה יותר
 
     # Calculate offset for X and Y to center the packing
     offset_x = (SQUARE_SIDE - packing_width) / 2.0
@@ -188,7 +192,7 @@ option = st.sidebar.radio(
         '105 Circles (Hexagonal Layout)', 
         '106 Circles (Optimal Solution)'
     ),
-    index=None
+    index=None # שום דבר לא נבחר בהתחלה
 )
 
 # --- Main Page Logic ---
@@ -201,18 +205,21 @@ explanation = ""
 
 if option is None:
     # Default view when nothing is selected
-    coords = np.array([[5.0, 5.0]])  # Single circle in center
-    packing_width = SQUARE_SIDE  # Same as square to avoid drawing inner box
-    packing_height = SQUARE_SIDE
-    num_circles = 1
-    plot_title = "Empty 10x10 Square with Reference Circle (D=1)"
-    explanation = """
-    This is an **empty 10×10 square** with a **single coin** (diameter=1) as a reference point.
-    * **Goal:** Maximize the number of coins that can fit inside the square.
-    * **Coin dimensions:** Diameter = 1, Radius = 0.5
-    * **Square dimensions:** 10×10
+    st.subheader("Welcome!")
+    st.markdown("Please select a packing solution from the sidebar to begin.")
     
-    Select one of the options in the menu to see different packing solutions.
+    # יצירת גרף ריק עם עיגול אחד לדוגמה
+    coords = np.array([[SQUARE_SIDE / 2, SQUARE_SIDE / 2]]) # עיגול בודד במרכז
+    packing_width = CIRCLE_DIAMETER 
+    packing_height = CIRCLE_DIAMETER
+    num_circles = 1
+    plot_title = "Empty 10x10 Square (with 1 reference circle)"
+    explanation = """
+    This is an **empty 10x10 square** with a **single coin** (diameter=1) in the center as a reference.
+    
+    The goal is to maximize the number of coins that can fit inside the red square.
+    
+    Select one of the options in the sidebar to see the solutions.
     """
 
 elif option == '100 Circles (Grid Layout)':
@@ -231,7 +238,7 @@ elif option == '105 Circles (Hexagonal Layout)':
     plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Hexagonal)"
     explanation = f"""
     This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
-    * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total 60 + 45 = 105).
+    * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
     * **Efficiency:** The blue dashed line shows the bounding box for this packing, which has a width of **{packing_width:.2f}** and a height of **{packing_height:.2f}**.
     """
 
@@ -252,7 +259,8 @@ elif option == '106 Circles (Optimal Solution)':
 # --- Display the plot and explanations ---
 
 if len(coords) > 0:
-    st.subheader(f"Displaying: {num_circles} Circles")
+    if option is not None: # רק אם משהו נבחר
+        st.subheader(f"Displaying: {num_circles} Circles")
     
     plot_circles(coords, packing_width, packing_height, plot_title)
     
@@ -264,5 +272,6 @@ if len(coords) > 0:
     * **Red Box:** The 10x10 target square.
     * **Blue Dashed Box:** The minimal **bounding box (Width x Height)** for the packing.
     """)
-else:
+elif option is not None:
+    # אם משהו נבחר אבל הטעינה נכשלה (למשל 106)
     st.warning("Could not display the selected solution. Please check the error messages above.")

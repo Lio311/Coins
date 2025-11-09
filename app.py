@@ -4,59 +4,59 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 
-# --- הגדרות קבועות ---
-SQUARE_SIDE = 10.0  # צלע הריבוע
+# --- Constants ---
+SQUARE_SIDE = 10.0  # Side length of the square
 CIRCLE_DIAMETER = 1.0
 CIRCLE_RADIUS = CIRCLE_DIAMETER / 2.0
 DATA_DIR = "data"
 COORDS_106_FILE = os.path.join(DATA_DIR, "coords_106.txt")
 
-# גודל הריבוע המינימלי שמכיל את הפתרון של 106 עיגולים (לפי המחקר)
+# The side of the minimal bounding box for the 106-circle solution
+# This is known from the packing research.
 SOLUTION_SIDE_106_MINIMAL = 9.697932828
 
-# --- פונקציות ליצירת קואורדינטות ---
+# --- Coordinate Generation Functions ---
 
 def generate_coords_100_circles():
-    """יוצר קואורדינטות לסידור 10x10 של 100 מטבעות."""
+    """Generates coordinates for a simple 10x10 grid."""
     coords = []
     for row in range(10):
         for col in range(10):
-            # מרכז המעגל
+            # Circle center
             x = col * CIRCLE_DIAMETER + CIRCLE_RADIUS
             y = row * CIRCLE_DIAMETER + CIRCLE_RADIUS
             coords.append((x, y))
-    return np.array(coords), SQUARE_SIDE # 100% ניצול גובה/רוחב
+    # This packing perfectly fills the 10x10 square
+    return np.array(coords), SQUARE_SIDE
 
 def generate_coords_105_circles():
-    """יוצר קואורדינטות לסידור משושה (כוורת) של 105 מטבעות."""
+    """Generates coordinates for a hexagonal (honeycomb) packing of 105 circles."""
     coords = []
     
-    # גובה שורה אחת בסידור משושה (sqrt(3)/2 * קוטר)
-    # 0.86602540378 * 1 = 0.86602540378
-    row_height = np.sqrt(3) / 2 * CIRCLE_DIAMETER 
+    # Height of one row in a hexagonal packing (sqrt(3)/2 * diameter)
+    row_height = np.sqrt(3) / 2 * CIRCLE_DIAMETER  # Approx 0.866
     
-    num_rows = 11 # כפי שחישבנו, 11 שורות נכנסות בריבוע 10x10
+    num_rows = 11  # 11 rows fit inside the 10.0 height
     
-    # חישוב הגובה הכולל של הסידור
+    # Calculate the total height of this packing
     total_packing_height = (num_rows - 1) * row_height + CIRCLE_DIAMETER
     
-    # מספר מטבעות בשורות לסירוגין
-    num_circles_even_row = 10 # 10 מטבעות
-    num_circles_odd_row = 9  # 9 מטבעות
+    num_circles_long_row = 10
+    num_circles_short_row = 9
     
     for i in range(num_rows):
-        is_even_row = (i % 2 == 0) # שורות 0, 2, 4... הן שורות "ארוכות"
+        is_long_row = (i % 2 == 0)  # Rows 0, 2, 4... are "long"
         
-        current_num_circles = num_circles_even_row if is_even_row else num_circles_odd_row
+        current_num_circles = num_circles_long_row if is_long_row else num_circles_short_row
         
-        # מרכז y של השורה
+        # Y center for this row
         y_center = i * row_height + CIRCLE_RADIUS
         
         for j in range(current_num_circles):
             x_center = j * CIRCLE_DIAMETER + CIRCLE_RADIUS
             
-            # אם זו שורה "אי-זוגית" (קצרה), צריך להזיז אותה חצי קוטר
-            if not is_even_row:
+            # If it's a "short" row, offset it by half a radius
+            if not is_long_row:
                 x_center += CIRCLE_RADIUS
             
             coords.append((x_center, y_center))
@@ -64,122 +64,179 @@ def generate_coords_105_circles():
     return np.array(coords), total_packing_height
 
 def load_coords_106_circles():
-    """טוען קואורדינטות ל-106 מטבעות מקובץ."""
-    if not os.path.exists(COORDS_106_FILE):
-        st.error(f"קובץ הקואורדינטות ל-106 מטבעות לא נמצא: {COORDS_106_FILE}")
-        st.info("אנא וודא שהורדת את הקובץ מ-http://www.packomania.com/txt/csq106.txt ושמרת אותו בתיקייה data/ בשם coords_106.txt")
-        return np.array([]), 0
+    """Loads the 106-circle optimal solution from a text file."""
     
-    coords = np.loadtxt(COORDS_106_FILE)
+    # Check if file exists
+    if not os.path.exists(COORDS_106_FILE):
+        st.error(f"Data file not found: {COORDS_106_FILE}")
+        st.info(f"Please download the file from http://www.packomania.com/txt/csq106.txt and save it as 'data/coords_106.txt' in your project directory.")
+        return np.array([]), 0
+
+    # Check if file is empty (causes loadtxt error)
+    if os.path.getsize(COORDS_106_FILE) == 0:
+        st.error(f"Data file is empty: {COORDS_106_FILE}")
+        return np.array([]), 0
+        
+    try:
+        # --- THIS IS THE FIX ---
+        # ndmin=2 ensures NumPy returns a 2D array even if the file has only one line
+        # This prevents the ValueError during iteration.
+        coords = np.loadtxt(COORDS_106_FILE, ndmin=2)
+        
+    except Exception as e:
+        st.error(f"Error loading data file {COORDS_106_FILE}: {e}")
+        return np.array([]), 0
+
+    # Validate data shape (should be N rows, 2 columns)
+    if coords.shape[1] != 2:
+         st.error(f"Data file {COORDS_106_FILE} is not in the correct (X, Y) format. Expected 2 columns.")
+         return np.array([]), 0
+
+    # Just a warning, not a critical error
     if len(coords) != 106:
-        st.warning(f"קובץ {COORDS_106_FILE} צפוי להכיל 106 שורות, אך מכיל {len(coords)}.")
+        st.warning(f"Warning: {COORDS_106_FILE} was expected to have 106 lines, but has {len(coords)}.")
     
     return coords, SOLUTION_SIDE_106_MINIMAL
 
-# --- פונקציית ציור ---
+# --- Plotting Function ---
 
 def plot_circles(coords, packing_side, title):
-    """מציירת את המטבעות בתוך הריבוע."""
-    fig, ax = plt.subplots(figsize=(8, 8)) # גודל fig מספיק ל-Streamlit
+    """Uses Matplotlib to draw the circles in the square."""
+    fig, ax = plt.subplots(figsize=(8, 8)) # Good size for Streamlit
 
-    # חישוב היסט כדי למרכז את הסידור בריבוע ה-10x10
+    # Calculate offset to center the packing inside the 10x10 square
     offset = (SQUARE_SIDE - packing_side) / 2.0
 
-    # צייר את הריבוע החיצוני (10x10)
+    # 1. Draw the outer 10x10 square
     square_outer = patches.Rectangle(
         (0, 0),
         SQUARE_SIDE,
         SQUARE_SIDE,
         fill=False,
-        edgecolor='red',
-        linewidth=2,
-        label='10x10 Square'
+        edgecolor='darkred',
+        linewidth=2.5,
+        label='10x10 Target Square'
     )
     ax.add_patch(square_outer)
 
-    # צייר את הריבוע הפנימי (אזור האריזה בפועל)
+    # 2. Draw the inner (minimal) bounding box
     if packing_side < SQUARE_SIDE:
         square_inner = patches.Rectangle(
             (offset, offset),
             packing_side,
             packing_side,
             fill=False,
-            edgecolor='blue',
+            edgecolor='navy',
             linestyle='--',
-            linewidth=1,
-            label=f'Packed Area (~{packing_side:.3f})'
+            linewidth=1.5,
+            label=f'Actual Packed Area (~{packing_side:.3f})'
         )
         ax.add_patch(square_inner)
 
-    # צייר את כל המטבעות
+    # 3. Draw all the circles
     for (x, y) in coords:
         circle = patches.Circle(
-            (x + offset, y + offset),
+            (x + offset, y + offset),  # Apply offset to center the circle
             CIRCLE_RADIUS,
-            facecolor='skyblue',
+            facecolor='cornflowerblue', # A nice blue
             edgecolor='black',
-            alpha=0.8
+            alpha=0.7
         )
         ax.add_patch(circle)
 
-    ax.set_aspect('equal')
+    # --- Final plot adjustments ---
+    ax.set_aspect('equal') # Ensures circles are not squashed
     ax.set_xlim(0, SQUARE_SIDE)
     ax.set_ylim(0, SQUARE_SIDE)
-    ax.set_title(title)
+    ax.set_title(title, fontsize=16)
     ax.legend(loc='lower right')
     plt.grid(True, linestyle=':', alpha=0.5)
     
-    st.pyplot(fig) # הצגת הגרף ב-Streamlit
+    st.pyplot(fig) # Display the plot in Streamlit
 
-# --- ממשק Streamlit ---
+# --- Streamlit App UI ---
 
+# Set page config for a cleaner look
 st.set_page_config(
-    page_title="Circle Packing in a Square",
+    page_title="Circle Packing Visualizer",
+    page_icon="🔵", # Visual flair
     layout="centered",
     initial_sidebar_state="expanded"
 )
 
-st.title("כמה מטבעות (קוטר 1) בריבוע (10x10)?")
-st.markdown("אפליקציה זו מדגימה סידורים שונים של מטבעות עם קוטר 1 בריבוע בגודל 10x10.")
-st.markdown(" ") # רווח
+st.title("🔵 Circle Packing Visualizer")
+st.markdown("How many coins (Diameter=1) can fit in a 10x10 square? This app visualizes different packing solutions.")
+st.markdown("---") # Horizontal line
 
+# --- Sidebar for selection ---
+st.sidebar.header("Controls")
 option = st.sidebar.radio(
-    "בחר את מספר המטבעות להצגה:",
-    ('100 מטבעות (סידור רשת)', '105 מטבעות (סידור משושה)', '106 מטבעות (האופטימלי)')
+    "Select a packing solution:",
+    (
+        '100 Circles (Grid Layout)', 
+        '105 Circles (Hexagonal Layout)', 
+        '106 Circles (Optimal Solution)'
+    )
 )
 
+# --- Main Page Logic ---
 coords = np.array([])
 packing_side = SQUARE_SIDE
 num_circles = 0
 plot_title = ""
+explanation = ""
 
-if option == '100 מטבעות (סידור רשת)':
+if option == '100 Circles (Grid Layout)':
     coords, packing_side = generate_coords_100_circles()
     num_circles = 100
-    plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Grid)"
-elif option == '105 מטבעות (סידור משושה)':
+    plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Simple Grid)"
+    explanation = """
+    This is the most intuitive solution. A simple **10x10 grid** places 100 circles perfectly.
+    * **Efficiency:** This packing fills 100% of the square's width and height.
+    * **Space Usage:** The area covered by circles is $100 \times \pi \times (0.5)^2 \approx 78.54$. This is the baseline density.
+    """
+
+elif option == '105 Circles (Hexagonal Layout)':
     coords, packing_side = generate_coords_105_circles()
     num_circles = 105
     plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Hexagonal)"
-elif option == '106 מטבעות (האופטימלי)':
+    explanation = """
+    This solution uses a **hexagonal (or 'honeycomb') layout**, which is generally denser than a grid.
+    * **Arrangement:** It fits 11 rows. 6 rows contain 10 circles, and 5 rows contain 9 circles (total $60 + 45 = 105$).
+    * **Efficiency:** As you can see from the blue dashed line, this packing doesn't use the full 10.0 height (it uses ~9.66), but its higher density allows 5 extra circles to be added.
+    """
+
+elif option == '106 Circles (Optimal Solution)':
     coords, packing_side = load_coords_106_circles()
-    num_circles = len(coords) # יעדכן אם קובץ ריק
+    num_circles = len(coords) # Will be 106 if file loaded, 0 if error
     if num_circles == 106:
         plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Optimal)"
+        explanation = """
+        This is the **known optimal solution**. It was found using computational optimization algorithms and is not intuitive.
+        * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces left by the 105-circle hexagonal layout.
+        * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com), a database of optimal packing solutions.
+        """
     else:
         plot_title = "Error Loading 106 Circles Data"
 
+# --- Display the plot and explanations ---
+
 if len(coords) > 0:
-    st.subheader(f"הצגת: {num_circles} מטבעות")
+    st.subheader(f"Displaying: {num_circles} Circles")
+    
+    # Show the plot
     plot_circles(coords, packing_side, plot_title)
     
-    st.markdown("---")
-    st.markdown("""
-    **הערות:**
-    * **ריבוע אדום:** מייצג את הריבוע המקורי בגודל 10x10.
-    * **ריבוע כחול מקווקו:** מייצג את השטח המינימלי הנדרש לאריזה בפועל של המטבעות בסידור נתון.
-        * עבור 100 מטבעות, זה בדיוק 10x10.
-        * עבור 105 ו-106, השטח קטן מעט מ-10x10, מה שמשאיר מעט 'ריפוד' בקצוות, אבל המטבעות נמצאים בתוך הריבוע האדום.
+    # Show the explanation for the selected option
+    with st.expander("About This Solution", expanded=True):
+        st.markdown(explanation)
+    
+    # Show the key
+    st.info("""
+    **Key:**
+    * **Red Box:** The 10x10 target square.
+    * **Blue Dashed Box:** The minimal area required for the packing. If this is smaller than the red box, it means there is empty space around the edges.
     """)
 else:
-    st.warning("לא ניתן להציג סידור. אנא בדוק את שגיאות הקונסול או את קובץ הנתונים.")
+    # This shows if the 106-file load failed
+    st.warning("Could not display the selected solution. Please check the error messages above.")

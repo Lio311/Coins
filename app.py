@@ -79,15 +79,18 @@ def load_coords_106_circles():
         
     try:
         # --- THIS IS THE FIX ---
-        # ndmin=2 ensures NumPy returns a 2D array even if the file has only one line
-        # This prevents the ValueError during iteration.
-        coords = np.loadtxt(COORDS_106_FILE, ndmin=2)
+        # 1. ndmin=2 ensures a 2D array
+        # 2. usecols=(1, 2) skips the first (index) column and reads only X and Y
+        coords = np.loadtxt(COORDS_106_FILE, ndmin=2, usecols=(1, 2))
         
     except Exception as e:
+        # This will catch errors if the file is still broken (like line 30)
         st.error(f"Error loading data file {COORDS_106_FILE}: {e}")
+        st.error("This often means the file is corrupted with broken lines. Please re-download it.")
         return np.array([]), 0
 
     # Validate data shape (should be N rows, 2 columns)
+    # This check will now pass because usecols=(1, 2) ensures shape[1] is 2
     if coords.shape[1] != 2:
          st.error(f"Data file {COORDS_106_FILE} is not in the correct (X, Y) format. Expected 2 columns.")
          return np.array([]), 0
@@ -209,10 +212,10 @@ elif option == '105 Circles (Hexagonal Layout)':
 elif option == '106 Circles (Optimal Solution)':
     coords, packing_side = load_coords_106_circles()
     num_circles = len(coords) # Will be 106 if file loaded, 0 if error
-    if num_circles == 106:
+    if num_circles > 0: # Check if loading was successful
         plot_title = f"{num_circles} Circles (D=1) in 10x10 Square (Optimal)"
-        explanation = """
-        This is the **known optimal solution**. It was found using computational optimization algorithms and is not intuitive.
+        explanation = f"""
+        This is the **known optimal solution** (for {num_circles} circles). It was found using computational optimization algorithms and is not intuitive.
         * **Arrangement:** The pattern is irregular. It "squeezes" an extra circle in by taking advantage of the small empty spaces left by the 105-circle hexagonal layout.
         * **Source:** The coordinates are from [Packomania.com](http://www.packomania.com), a database of optimal packing solutions.
         """
